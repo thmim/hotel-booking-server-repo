@@ -34,7 +34,20 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     })
-
+    // get data using id
+    app.get('/hotels/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id:new ObjectId(id)}
+      const result = await hotelsCollection.findOne(query);
+      res.send(result);
+    })
+    // getting visitors data using id
+     app.get('/visitors/:id',async(req,res)=>{
+        const id = req.params.id;
+      const query = {_id:new ObjectId(id)}
+      const result = await guestsCollection.findOne(query);
+      res.send(result);
+     })
     // my bookings data getting api
     app.get('/visitors',async(req,res)=>{
       const email = req.query.email
@@ -44,6 +57,7 @@ async function run() {
       const result = await guestsCollection.find(query).toArray();
       res.send(result);
     })
+    
     // user data added api
     app.post('/visitors',async(req,res)=>{
       const guestInfo = req.body;
@@ -52,11 +66,15 @@ async function run() {
       res.send(result);
     })
     
-    // get data using id
-    app.get('/hotels/:id',async(req,res)=>{
+    // booking date update api
+    app.patch('/visitors/:id',async(req,res)=>{
       const id = req.params.id;
-      const query = {_id:new ObjectId(id)}
-      const result = await hotelsCollection.findOne(query);
+      const filter = {_id:new ObjectId(id)}
+      const updateDate = req.body;
+      const updatedDoc = {
+        $set:updateDate
+      }
+      const result = await guestsCollection.updateOne(filter,updatedDoc);
       res.send(result);
     })
     // Send a ping to confirm a successful connection
