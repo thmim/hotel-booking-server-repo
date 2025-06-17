@@ -27,6 +27,7 @@ async function run() {
     
     const hotelsCollection = client.db('hotesBookings').collection('hotels');
     const guestsCollection = client.db('hotesBookings').collection('visitors');
+    const reviewsCollection = client.db('hotesBookings').collection('reviewers');
 
     // all hotels getting api
     app.get('/hotels',async(req,res)=>{
@@ -66,6 +67,12 @@ async function run() {
       const result = await guestsCollection.insertOne(guestInfo);
       res.send(result);
     })
+    // reviews post
+    app.post('/reviewers',async(req,res)=>{
+      const reviewInfo = req.body;
+      const result = await reviewsCollection.insertOne(reviewInfo);
+      res.send(result);
+    })
     
     // booking date update api
     app.put('/visitors/:id',async(req,res)=>{
@@ -76,6 +83,13 @@ async function run() {
         $set:updateDate
       }
       const result = await guestsCollection.updateOne(filter,updatedDoc);
+      res.send(result);
+    })
+    // cancel booking api
+    app.delete('/visitors/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id:new ObjectId(id)}
+      const result = await guestsCollection.deleteOne(query)
       res.send(result);
     })
     // Send a ping to confirm a successful connection
