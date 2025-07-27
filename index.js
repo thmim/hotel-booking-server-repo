@@ -75,7 +75,7 @@ async function run() {
 
     // guest data added api
     app.post('/visitors', async (req, res) => {
-      const { roomId, checkInDate, guest, name, photo, guestNumber, phone, type, checkOutDate,price } = req.body;
+      const { roomId, checkInDate, guest, name, photo, guestNumber, phone, type, checkOutDate, price } = req.body;
       console.log(checkInDate)
       try {
         const newCheckIn = new Date(checkInDate + 'T00:00:00Z');
@@ -288,9 +288,12 @@ async function run() {
     app.put('/visitors/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) }
-      const updateDate = req.body;
+      const { checkInDate, checkOutDate } = req.body;
       const updatedDoc = {
-        $set: updateDate
+        $set: {
+          checkInDate: new Date(checkInDate),
+          checkOutDate: new Date(checkOutDate),
+        },
       }
       const result = await guestsCollection.updateOne(filter, updatedDoc);
       res.send(result);
