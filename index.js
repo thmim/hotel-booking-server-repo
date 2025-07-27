@@ -75,7 +75,7 @@ async function run() {
 
     // guest data added api
     app.post('/visitors', async (req, res) => {
-      const { roomId, checkInDate, guest, name, photo, guestNumber, phone, type, checkOutDate } = req.body;
+      const { roomId, checkInDate, guest, name, photo, guestNumber, phone, type, checkOutDate,price } = req.body;
       console.log(checkInDate)
       try {
         const newCheckIn = new Date(checkInDate + 'T00:00:00Z');
@@ -102,6 +102,7 @@ async function run() {
           guestNumber,
           photo,
           roomId,
+          price,
           checkInDate: newCheckIn,
           checkOutDate: newCheckOut,
           createdAt: new Date()
