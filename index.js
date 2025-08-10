@@ -163,7 +163,7 @@ app.get('/toprated', async (req, res) => {
     // Sort by rating descending and get top 6
     const sortedTopHotels = hotelWithRatings
       .sort((a, b) => b.rating - a.rating)
-      .slice(0, 6);
+      .slice(0, 8);
 
     // Select only the required fields
     const topRatedRooms = sortedTopHotels.map(hotel => ({
