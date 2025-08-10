@@ -32,21 +32,9 @@ app.get('/hotels/:id', async (req, res) => {
   const result = await hotelsCollection.findOne(query);
   res.send(result);
 })
-// filter hotels
-// app.get('/hotels', async (req, res) => {
-//   const min = parseInt(req.query.min) || 0;
-//   const max = parseInt(req.query.max) || Infinity;
-
-//   const query = {
-//     price: { $gte: min, $lte: max }
-//   };
-//   console.log("Final Query to DB:", query);
-//   const result = await hotelsCollection.find(query).toArray();
-//   res.send(result);
-// });
 
 app.get('/hotels', async (req, res) => {
-  // মূল্য অনুসারে ফিল্টার করার জন্য কোড অপরিবর্তিত
+ 
   const min = parseInt(req.query.min) || 0;
   const max = parseInt(req.query.max) || Infinity;
 
@@ -55,23 +43,22 @@ app.get('/hotels', async (req, res) => {
   };
 
   try {
-    // প্রথমে সমস্ত হোটেল ডেটা আনা হচ্ছে
+   
     const hotels = await hotelsCollection.find(query).toArray();
 
-    // প্রতিটি হোটেলের জন্য রেটিং ক্যালকুলেট করার লজিক
+   
     const hotelsWithRatings = await Promise.all(
       hotels.map(async (hotel) => {
-        // এই হোটেলের _id ব্যবহার করে রিভিউ ডেটা খুঁজে বের করা হচ্ছে
+       
         const reviews = await reviewsCollection.find({ bookingId: hotel._id.toString() }).toArray();
 
         let averageRating = 0;
         if (reviews.length > 0) {
-          // সমস্ত রেটিং যোগ করে গড় বের করা
+         
           const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
-          averageRating = (totalRating / reviews.length).toFixed(1); // দশমিকের পর এক ঘর পর্যন্ত রাখা
+          averageRating = (totalRating / reviews.length).toFixed(1); 
         }
 
-        // মূল হোটেল অবজেক্টে নতুন 'rating' প্রপার্টি যোগ করা
         return { ...hotel, rating: parseFloat(averageRating) };
       })
     );
@@ -201,7 +188,7 @@ app.get('/toprated', async (req, res) => {
 
         return {
           ...hotel,
-          rating: parseFloat(averageRating.toFixed(1)) // Keep one decimal point
+          rating: parseFloat(averageRating.toFixed(1))
         };
       })
     );
@@ -289,13 +276,6 @@ app.post('/payments', async (req, res) => {
 
     const paymentResult = await paymentsCollection.insertOne(paymentEntry);
 
-    // if (paymentResult.insertedId) {
-    //   const updateResult = await addClassCollection.updateOne(
-    //     { _id: new ObjectId(courseId) },
-    //     { $inc: { enrollmentCount: 1 } }
-    //   );
-
-    // }
 
     res.status(201).send({
       message: 'Payment recorded successfully',
