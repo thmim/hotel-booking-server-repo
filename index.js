@@ -46,42 +46,42 @@ app.get('/hotels/:id', async (req, res) => {
 // });
 
 app.get('/hotels', async (req, res) => {
-    // মূল্য অনুসারে ফিল্টার করার জন্য কোড অপরিবর্তিত
-    const min = parseInt(req.query.min) || 0;
-    const max = parseInt(req.query.max) || Infinity;
+  // মূল্য অনুসারে ফিল্টার করার জন্য কোড অপরিবর্তিত
+  const min = parseInt(req.query.min) || 0;
+  const max = parseInt(req.query.max) || Infinity;
 
-    const query = {
-        price: { $gte: min, $lte: max }
-    };
-    
-    try {
-        // প্রথমে সমস্ত হোটেল ডেটা আনা হচ্ছে
-        const hotels = await hotelsCollection.find(query).toArray();
+  const query = {
+    price: { $gte: min, $lte: max }
+  };
 
-        // প্রতিটি হোটেলের জন্য রেটিং ক্যালকুলেট করার লজিক
-        const hotelsWithRatings = await Promise.all(
-            hotels.map(async (hotel) => {
-                // এই হোটেলের _id ব্যবহার করে রিভিউ ডেটা খুঁজে বের করা হচ্ছে
-                const reviews = await reviewsCollection.find({ bookingId: hotel._id.toString() }).toArray();
+  try {
+    // প্রথমে সমস্ত হোটেল ডেটা আনা হচ্ছে
+    const hotels = await hotelsCollection.find(query).toArray();
 
-                let averageRating = 0;
-                if (reviews.length > 0) {
-                    // সমস্ত রেটিং যোগ করে গড় বের করা
-                    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
-                    averageRating = (totalRating / reviews.length).toFixed(1); // দশমিকের পর এক ঘর পর্যন্ত রাখা
-                }
+    // প্রতিটি হোটেলের জন্য রেটিং ক্যালকুলেট করার লজিক
+    const hotelsWithRatings = await Promise.all(
+      hotels.map(async (hotel) => {
+        // এই হোটেলের _id ব্যবহার করে রিভিউ ডেটা খুঁজে বের করা হচ্ছে
+        const reviews = await reviewsCollection.find({ bookingId: hotel._id.toString() }).toArray();
 
-                // মূল হোটেল অবজেক্টে নতুন 'rating' প্রপার্টি যোগ করা
-                return { ...hotel, rating: parseFloat(averageRating) };
-            })
-        );
-        
-        res.send(hotelsWithRatings);
+        let averageRating = 0;
+        if (reviews.length > 0) {
+          // সমস্ত রেটিং যোগ করে গড় বের করা
+          const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+          averageRating = (totalRating / reviews.length).toFixed(1); // দশমিকের পর এক ঘর পর্যন্ত রাখা
+        }
 
-    } catch (error) {
-        console.error("Error fetching hotels with ratings:", error);
-        res.status(500).send({ message: "Server error" });
-    }
+        // মূল হোটেল অবজেক্টে নতুন 'rating' প্রপার্টি যোগ করা
+        return { ...hotel, rating: parseFloat(averageRating) };
+      })
+    );
+
+    res.send(hotelsWithRatings);
+
+  } catch (error) {
+    console.error("Error fetching hotels with ratings:", error);
+    res.status(500).send({ message: "Server error" });
+  }
 });
 
 
@@ -253,62 +253,79 @@ app.delete('/visitors/:id', async (req, res) => {
   res.send(result);
 })
 
+// get payment info
+app.get('/paymentsInfo', async (req, res) => {
+  const email = req.query.email;
+  if (!email) {
+    return res.status(400).json({ error: 'Email query param is required' });
+  }
+  try {
+    const payments = await paymentsCollection
+  .find({ email })
+  .sort({ paid_at: -1 })
+  .toArray(); 
+    res.json(payments);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Mark payment and store history
-    app.post('/payments', async (req, res) => {
-      const { id, transactionId, amount, email, paymentMethod } = req.body;
+app.post('/payments', async (req, res) => {
+  const { id, transactionId, amount, email, paymentMethod } = req.body;
 
-      try {
+  try {
 
-        // Insert payment history
-        const paymentEntry = {
-          hotelsId: new ObjectId(id),
-          transactionId,
-          amount,
-          email,
-          paid_at: new Date(),
-          paid_at_string: new Date().toISOString(),
-          paymentMethod
-        };
+    // Insert payment history
+    const paymentEntry = {
+      hotelsId: new ObjectId(id),
+      transactionId,
+      amount,
+      email,
+      paid_at: new Date(),
+      paid_at_string: new Date().toISOString(),
+      paymentMethod
+    };
 
-        const paymentResult = await paymentsCollection.insertOne(paymentEntry);
+    const paymentResult = await paymentsCollection.insertOne(paymentEntry);
 
-        // if (paymentResult.insertedId) {
-        //   const updateResult = await addClassCollection.updateOne(
-        //     { _id: new ObjectId(courseId) },
-        //     { $inc: { enrollmentCount: 1 } }
-        //   );
+    // if (paymentResult.insertedId) {
+    //   const updateResult = await addClassCollection.updateOne(
+    //     { _id: new ObjectId(courseId) },
+    //     { $inc: { enrollmentCount: 1 } }
+    //   );
 
-        // }
+    // }
 
-        res.status(201).send({
-          message: 'Payment recorded successfully',
-          insertedId: paymentResult.insertedId,
+    res.status(201).send({
+      message: 'Payment recorded successfully',
+      insertedId: paymentResult.insertedId,
 
-        });
-        // res.json({ success: true, message: 'Payment recorded successfully' });
-      } catch (error) {
-        console.error('Payment processing error:', error);
-        res.status(500).json({ success: false, error: 'Internal server error' });
-      }
+    });
+    // res.json({ success: true, message: 'Payment recorded successfully' });
+  } catch (error) {
+    console.error('Payment processing error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// payment intent API
+app.post('/create-payment-intent', async (req, res) => {
+  const amountInCents = req.body.amountInCents
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents, // Amount in cents
+      currency: 'usd',
+      payment_method_types: ['card'],
     });
 
-    // payment intent API
-    app.post('/create-payment-intent', async (req, res) => {
-      const amountInCents = req.body.amountInCents
-      try {
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: amountInCents, // Amount in cents
-          currency: 'usd',
-          payment_method_types: ['card'],
-        });
-
-        res.send({
-          clientSecret: paymentIntent.client_secret,
-        });
-      } catch (error) {
-        res.status(400).send({ error: error.message });
-      }
+    res.send({
+      clientSecret: paymentIntent.client_secret,
     });
+  } catch (error) {
+    res.status(400).send({ error: error.message });
+  }
+});
 
 
 
