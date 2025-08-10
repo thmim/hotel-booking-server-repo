@@ -23,7 +23,7 @@ const hotelsCollection = client.db('hotesBookings').collection('hotels');
 const guestsCollection = client.db('hotesBookings').collection('visitors');
 const reviewsCollection = client.db('hotesBookings').collection('reviewers');
 
-// get data using id
+// get hotel data using id
 app.get('/hotels/:id', async (req, res) => {
   const id = req.params.id;
   const query = { _id: new ObjectId(id) }
@@ -31,17 +31,61 @@ app.get('/hotels/:id', async (req, res) => {
   res.send(result);
 })
 // filter hotels
-app.get('/hotels', async (req, res) => {
-  const min = parseInt(req.query.min) || 0;
-  const max = parseInt(req.query.max) || Infinity;
+// app.get('/hotels', async (req, res) => {
+//   const min = parseInt(req.query.min) || 0;
+//   const max = parseInt(req.query.max) || Infinity;
 
-  const query = {
-    price: { $gte: min, $lte: max }
-  };
-  console.log("Final Query to DB:", query);
-  const result = await hotelsCollection.find(query).toArray();
-  res.send(result);
+//   const query = {
+//     price: { $gte: min, $lte: max }
+//   };
+//   console.log("Final Query to DB:", query);
+//   const result = await hotelsCollection.find(query).toArray();
+//   res.send(result);
+// });
+
+app.get('/hotels', async (req, res) => {
+    // মূল্য অনুসারে ফিল্টার করার জন্য কোড অপরিবর্তিত
+    const min = parseInt(req.query.min) || 0;
+    const max = parseInt(req.query.max) || Infinity;
+
+    const query = {
+        price: { $gte: min, $lte: max }
+    };
+    
+    try {
+        // প্রথমে সমস্ত হোটেল ডেটা আনা হচ্ছে
+        const hotels = await hotelsCollection.find(query).toArray();
+
+        // প্রতিটি হোটেলের জন্য রেটিং ক্যালকুলেট করার লজিক
+        const hotelsWithRatings = await Promise.all(
+            hotels.map(async (hotel) => {
+                // এই হোটেলের _id ব্যবহার করে রিভিউ ডেটা খুঁজে বের করা হচ্ছে
+                const reviews = await reviewsCollection.find({ bookingId: hotel._id.toString() }).toArray();
+
+                let averageRating = 0;
+                if (reviews.length > 0) {
+                    // সমস্ত রেটিং যোগ করে গড় বের করা
+                    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+                    averageRating = (totalRating / reviews.length).toFixed(1); // দশমিকের পর এক ঘর পর্যন্ত রাখা
+                }
+
+                // মূল হোটেল অবজেক্টে নতুন 'rating' প্রপার্টি যোগ করা
+                return { ...hotel, rating: parseFloat(averageRating) };
+            })
+        );
+        
+        res.send(hotelsWithRatings);
+
+    } catch (error) {
+        console.error("Error fetching hotels with ratings:", error);
+        res.status(500).send({ message: "Server error" });
+    }
 });
+
+
+
+
+
 // getting visitors data using id
 app.get('/visitors/:id', async (req, res) => {
   const id = req.params.id;
