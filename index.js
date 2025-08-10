@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
+const stripe = require('stripe')(process.env.PAYMENT_GATEWAY_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 app.use(cors());
@@ -22,6 +23,7 @@ const client = new MongoClient(uri, {
 const hotelsCollection = client.db('hotesBookings').collection('hotels');
 const guestsCollection = client.db('hotesBookings').collection('visitors');
 const reviewsCollection = client.db('hotesBookings').collection('reviewers');
+const paymentsCollection = client.db('hotesBookings').collection('payments');
 
 // get hotel data using id
 app.get('/hotels/:id', async (req, res) => {
@@ -250,6 +252,66 @@ app.delete('/visitors/:id', async (req, res) => {
   const result = await guestsCollection.deleteOne(query)
   res.send(result);
 })
+
+// Mark payment and store history
+    app.post('/payments', async (req, res) => {
+      const { id, transactionId, amount, email, paymentMethod } = req.body;
+
+      try {
+
+        // Insert payment history
+        const paymentEntry = {
+          hotelsId: new ObjectId(id),
+          transactionId,
+          amount,
+          email,
+          paid_at: new Date(),
+          paid_at_string: new Date().toISOString(),
+          paymentMethod
+        };
+
+        const paymentResult = await paymentsCollection.insertOne(paymentEntry);
+
+        // if (paymentResult.insertedId) {
+        //   const updateResult = await addClassCollection.updateOne(
+        //     { _id: new ObjectId(courseId) },
+        //     { $inc: { enrollmentCount: 1 } }
+        //   );
+
+        // }
+
+        res.status(201).send({
+          message: 'Payment recorded successfully',
+          insertedId: paymentResult.insertedId,
+
+        });
+        // res.json({ success: true, message: 'Payment recorded successfully' });
+      } catch (error) {
+        console.error('Payment processing error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+      }
+    });
+
+    // payment intent API
+    app.post('/create-payment-intent', async (req, res) => {
+      const amountInCents = req.body.amountInCents
+      try {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amountInCents, // Amount in cents
+          currency: 'usd',
+          payment_method_types: ['card'],
+        });
+
+        res.send({
+          clientSecret: paymentIntent.client_secret,
+        });
+      } catch (error) {
+        res.status(400).send({ error: error.message });
+      }
+    });
+
+
+
 // Send a ping to confirm a successful connection
 // await client.db("admin").command({ ping: 1 });
 // console.log("Pinged your deployment. You successfully connected to MongoDB!");
